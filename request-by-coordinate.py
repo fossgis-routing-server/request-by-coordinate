@@ -94,3 +94,14 @@ class RequestByCoordinate(object):
 
 if __name__ == '__main__':
     cherrypy.quickstart(RequestByCoordinate(), "/", "settings.cfg")
+else:
+     # Setup WSGI stuff
+
+    if cherrypy.__version__.startswith('3.0') and cherrypy.engine.state == 0:
+        cherrypy.engine.start(blocking=False)
+        atexit.register(cherrypy.engine.stop)
+
+    cherrypy.config.update('settings.cfg')
+    application = cherrypy.Application(RequestByCoordinate(), script_name=None,
+                    config='settings.cfg')
+
