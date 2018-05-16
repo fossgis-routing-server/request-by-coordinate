@@ -84,7 +84,7 @@ class RequestByCoordinate(object):
             cherrypy.response.status = e.code
             response = e
         fetchedheaders = response.info()
-        for i in cherrypy.response.headers.keys():
+        for i in list(cherrypy.response.headers.keys()):
             if i not in fetchedheaders:
                 del cherrypy.response.headers[i]
         for i in fetchedheaders:
