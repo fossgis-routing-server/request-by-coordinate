@@ -83,6 +83,8 @@ class RequestByCoordinate(object):
         except urllib.error.HTTPError as e:
             cherrypy.response.status = e.code
             response = e
+        except:
+            raise cherrypy.HTTPError(500, "Routing backend is not reachable")
         fetchedheaders = response.info()
         for i in list(cherrypy.response.headers.keys()):
             if i not in fetchedheaders:
