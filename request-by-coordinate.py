@@ -1,5 +1,6 @@
 import cherrypy
 import urllib.parse, urllib.request
+import math
 
 """
 Dispatches OSRM routing requests to backend servers
@@ -11,26 +12,41 @@ split it in parts and still offer worldwide routing
 with the exception of routes across server boundaries.
 """
 
+def tile2upper_left_coordinate(z,x,y):
+    s = float(2**z)
+    lon = float(x) / s * 360. - 180.
+    lat = math.atan(math.sinh(math.pi - float(y) / s * 2 * math.pi)) * 180 / math.pi
+    return (lon, lat)
+
+def tile2coordinates(tilestring):
+    try:
+        x, y, z = (int(i) for i in tilestring.split(','))
+    except:
+        return None
+    return [tile2upper_left_coordinate(z, x, y),
+            tile2upper_left_coordinate(z, x + 1, y + 1)]
+
+
+def url2coordinates(url):
+
+    try:
+        coords = url.split(';')
+    except:
+        return None
+    try:
+        coords = [c.split(',') for c in coords]
+    except:
+        return None
+    for c in coords:
+        if len(c) != 2:
+            return None
+    try:
+        coords = [(float(c[0]), float(c[1])) for c in coords]
+    except:
+        return None
+    return coords
+
 class RequestByCoordinate(object):
-
-    def url2coordinates(self, url):
-
-        try:
-            coords = url.split(';')
-        except:
-            return None
-        try:
-            coords = [c.split(',') for c in coords]
-        except:
-            return None
-        for c in coords:
-            if len(c) != 2:
-                return None
-        try:
-            coords = [(float(c[0]), float(c[1])) for c in coords]
-        except:
-            return None
-        return coords
 
     def contains(self, poly, testpoint):
         c = False
@@ -51,7 +67,15 @@ class RequestByCoordinate(object):
         mode = query[0]
         if mode not in cherrypy.request.app.config["modes"]["modes"]:
             raise cherrypy.HTTPError(404)
-        coords = self.url2coordinates(query[-1])
+
+        filepart = query[-1]
+        #routing request
+        coords = url2coordinates(filepart)
+
+        #debug tile requet
+        if not coords and len(filepart) > 13 and filepart[:5] == "tile(":
+            coords = tile2coordinates(filepart[5:-5])
+
         serverset = cherrypy.request.app.config[mode]["servers"]
         servers = dict();
         defaultserver = next(iter(serverset))
@@ -77,7 +101,9 @@ class RequestByCoordinate(object):
             useserver = max(inside, key=inside.get)
         useserver = servers[useserver][0]
 
-        requesturl = useserver + query[-1] + '?' + urllib.parse.urlencode(kwargs)
+        requesturl = useserver + '/' + '/'.join(query[1:])
+        if kwargs:
+            requesturl += '?' + urllib.parse.urlencode(kwargs)
         try:
             response = urllib.request.urlopen(requesturl)
         except urllib.error.HTTPError as e:
