@@ -1,6 +1,7 @@
 import cherrypy
 import urllib.parse, urllib.request
 import math
+from polyline import decodePolyline
 
 """
 Dispatches OSRM routing requests to backend servers
@@ -69,12 +70,16 @@ class RequestByCoordinate(object):
             raise cherrypy.HTTPError(404)
 
         filepart = query[-1]
-        #routing request
-        coords = url2coordinates(filepart)
 
-        #debug tile requet
-        if not coords and len(filepart) > 13 and filepart[:5] == "tile(":
+        if len(filepart) > 13 and filepart[:5] == "tile(":
+            #debug tile requet
             coords = tile2coordinates(filepart[5:-5])
+        elif filepart[:9] == "polyline(":
+            #poly line encoded coordinates
+            coords = decodePolyline(filepart[9:-1])
+        else:
+            #semicolon delimited coordinate pairs (lon,lat;...)
+            coords = url2coordinates(filepart)
 
         serverset = cherrypy.request.app.config[mode]["servers"]
         servers = dict();
