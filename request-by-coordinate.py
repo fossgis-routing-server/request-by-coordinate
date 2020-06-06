@@ -95,7 +95,7 @@ class RequestByCoordinate(object):
             inside = {k : 0 for k in servers}
             for coord in coords:
                 nonefound = True
-                for server, sdata in servers.items():
+                for server, sdata in list(servers.items()):
                     poly = sdata[1]
                     if poly is not None and self.contains(poly, coord):
                         inside[server] += 1
@@ -107,8 +107,8 @@ class RequestByCoordinate(object):
         useserver = servers[useserver][0]
 
         requesturl = useserver + '/' + '/'.join(query[1:])
-        if kwargs:
-            requesturl += '?' + urllib.parse.urlencode(kwargs)
+        if cherrypy.request.query_string:
+            requesturl += '?' + cherrypy.request.query_string
         try:
             response = urllib.request.urlopen(requesturl)
         except urllib.error.HTTPError as e:
