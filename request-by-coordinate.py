@@ -13,6 +13,19 @@ split it in parts and still offer worldwide routing
 with the exception of routes across server boundaries.
 """
 
+def null_island():
+    cherrypy.response.headers["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type"
+    cherrypy.response.headers["Access-Control-Allow-Methods"] = "GET"
+    cherrypy.response.headers["Access-Control-Allow-Origin"] = "*"
+    cherrypy.response.headers["Content-Disposition"]= "inline; filename=\"response.json\""
+    cherrypy.response.headers["Content-Type"] = "application/json; charset=UTF-8"
+    return ('{"message":'
+        + '"Welcome to Null Island. At least one point you entered is 0,0 (Which is in '
+        + 'the middle of the ocean. There is only a buoy known as Null Island) which '
+        + 'means that this query is not meaningful. Because this is so common, we '
+        + 'don\'t answer requests for 0,0 to preserve resources.",'
+        + '"code":"InvalidOptions"}').encode("UTF8")
+
 def tile2upper_left_coordinate(z,x,y):
     s = float(2**z)
     lon = float(x) / s * 360. - 180.
@@ -77,9 +90,13 @@ class RequestByCoordinate(object):
         elif filepart[:9] == "polyline(":
             #poly line encoded coordinates
             coords = decodePolyline(filepart[9:-1])
+            if not all(map(lambda coord: coord[0] or coord[1], coords)):
+                return null_island()
         else:
             #semicolon delimited coordinate pairs (lon,lat;...)
             coords = url2coordinates(filepart)
+            if not all(map(lambda coord: coord[0] or coord[1], coords)):
+                return null_island()
 
         serverset = cherrypy.request.app.config[mode]["servers"]
         servers = dict();
