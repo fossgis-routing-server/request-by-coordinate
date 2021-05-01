@@ -90,12 +90,12 @@ class RequestByCoordinate(object):
         elif filepart[:9] == "polyline(":
             #poly line encoded coordinates
             coords = decodePolyline(filepart[9:-1])
-            if not all(map(lambda coord: coord[0] or coord[1], coords)):
+            if coords is not None and not all(map(lambda coord: coord[0] or coord[1], coords)):
                 return null_island()
         else:
             #semicolon delimited coordinate pairs (lon,lat;...)
             coords = url2coordinates(filepart)
-            if not all(map(lambda coord: coord[0] or coord[1], coords)):
+            if coords is not None and not all(map(lambda coord: coord[0] or coord[1], coords)):
                 return null_island()
 
         serverset = cherrypy.request.app.config[mode]["servers"]
